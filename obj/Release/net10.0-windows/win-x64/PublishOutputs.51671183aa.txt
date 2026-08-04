@@ -1,0 +1,2 @@
+D:\VSCODE\IMCPointer\bin\Release\net10.0-windows\win-x64\publish\IMCPointer.pdb
+D:\VSCODE\IMCPointer\bin\Release\net10.0-windows\win-x64\publish\IMCPointer.exe

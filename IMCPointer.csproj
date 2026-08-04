@@ -29,7 +29,7 @@
     <InformationalVersion>1.0.0.0</InformationalVersion>
     <Company>stonkim93</Company>
     <Product>IMCPointer</Product>
-    <Description>Mouse Pointer and IME state indicator for Windows</Description>
+    <Description>Color Pointer to identify the keyboard input language</Description>
     <Copyright>Copyright (c) 2024 stonkim93</Copyright>
   </PropertyGroup>
 
