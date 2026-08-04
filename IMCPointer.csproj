@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- MS Store 빌드 여부 토글 스위치 -->
+    <IsStoreBuild>false</IsStoreBuild>
+
+    <!-- 일반 빌드 시에는 Windows OS 버전을 떼어내어 WinRT SDK 자동 포함을 방지 -->
+    <TargetFramework Condition="'$(IsStoreBuild)' != 'true'">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(IsStoreBuild)' == 'true'">net10.0-windows10.0.19041.0</TargetFramework>
+
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWpf>true</UseWpf>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>images\IMCPointer.ico</ApplicationIcon>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <NoWarn>$(NoWarn);CA1420</NoWarn>
+
+    <!-- Microsoft Store MSIX 패키징 및 앱 정보 설정 -->
+    <EnableMsixTooling Condition="'$(IsStoreBuild)' == 'true'">true</EnableMsixTooling>
+    <GenerateAppxPackageOnBuild Condition="'$(IsStoreBuild)' == 'true'">false</GenerateAppxPackageOnBuild>
+    <AppxPackageSigningEnabled Condition="'$(IsStoreBuild)' == 'true'">true</AppxPackageSigningEnabled>
+    
+    <!-- 앱 기본 정보 -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0.0</InformationalVersion>
+    <Company>stonkim93</Company>
+    <Product>IMCPointer</Product>
+    <Description>Mouse Pointer and IME state indicator for Windows</Description>
+    <Copyright>Copyright (c) 2024 stonkim93</Copyright>
+  </PropertyGroup>
+
+  <!-- [수정: 배열창 및 특수 입력 모드 관련 이미지 리소스 삭제, 기본 아이콘만 포함] -->
+  <ItemGroup>
+    <EmbeddedResource Include="images\IMCPointer.ico"/>
+  </ItemGroup>
+
+  <!-- MS Store 필수 파일들 및 SDK 참조 -->
+  <ItemGroup Condition="'$(IsStoreBuild)' == 'true'">
+    <AppxManifest Include="Package.appxmanifest" />
+    <Content Include="images\Square44x44Logo.png" />
+    <Content Include="images\Square150x150Logo.png" />
+    <Content Include="images\StoreLogo.png" />
+    <Content Include="images\SplashScreen.png" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsStoreBuild)' == 'true'">
+    <FrameworkReference Include="Microsoft.Windows.SDK.NET.Ref" />
+  </ItemGroup>
+
+</Project>
