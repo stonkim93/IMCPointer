@@ -20,6 +20,11 @@ namespace IMCPointer
         private const int MaxCacheSize = 100;
         private static readonly Dictionary<IntPtr, bool> _hangulStateCache = new Dictionary<IntPtr, bool>();
 
+        // IMEPali 실행 여부 캐싱 (5초마다 재확인, 폴링 부하 방지)
+        private static DateTime _lastPaliCheck = DateTime.MinValue;
+        private static bool _isPaliRunning = false;
+        private const int PaliCheckIntervalMs = 5000;
+
         /// <summary>
         /// 주어진 상태가 한글 입력 기반인지 확인합니다.
         /// </summary>
@@ -37,7 +42,8 @@ namespace IMCPointer
             long hklValue = NativeMethods.GetKeyboardLayout(threadId).ToInt64();
             ushort langId = (ushort)(hklValue & 0xFFFF);
 
-            if (langId == 0x0409) return State.PaliUS;
+            // 영어 US(0x0409)는 IMEPali 실행 시에만 PaliUS로 분류, 아니면 일반 영어 처리
+            if (langId == 0x0409) return IsPaliActive() ? State.PaliUS : (capsOn ? State.EnglishUpper : State.EnglishLower);
             if (langId == 0x0411) return State.JapaneseIME;
 
             if (langId == 0x0412) // 한국어 레이아웃
@@ -113,6 +119,26 @@ namespace IMCPointer
             }
             
             return _hangulStateCache.TryGetValue(hWnd, out bool cachedState) ? cachedState : false;
+        }
+
+        /// <summary>
+        /// IMEPali 프로세스가 실행 중인지 확인하여 Pali 입력기 활성화 여부를 반환합니다.
+        /// 성능을 위해 5초마다만 프로세스 목록을 재조회합니다.
+        /// </summary>
+        private static bool IsPaliActive()
+        {
+            if ((DateTime.Now - _lastPaliCheck).TotalMilliseconds < PaliCheckIntervalMs)
+                return _isPaliRunning;
+
+            _lastPaliCheck = DateTime.Now;
+            try
+            {
+                var procs = System.Diagnostics.Process.GetProcessesByName("IMEPali");
+                _isPaliRunning = procs.Length > 0;
+                foreach (var p in procs) p.Dispose(); // 핸들 누수 방지
+            }
+            catch { _isPaliRunning = false; }
+            return _isPaliRunning;
         }
 
         /// <summary>

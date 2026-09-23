@@ -410,6 +410,8 @@ namespace IMCPointer
         // ---------------------------------------------------------
         private readonly Dictionary<ImeState.State, StateAssets> _assetCache = new();
         private readonly System.Windows.Forms.Timer _stateCheckTimer;
+        private System.Threading.Timer? _wndProcDebounceTimer; // WndProc 디바운스 타이머
+        private const string RegKeyPath = @"Software\IMCPointer"; // 설정 저장 레지스트리 경로
         private readonly NotifyIcon _sysTrayIcon;
         private readonly ContextMenuStrip _trayContextMenu;
         private readonly ToolStripMenuItem _menuItemStatus;
@@ -502,6 +504,7 @@ namespace IMCPointer
             _trayContextMenu = new ContextMenuStrip();
             _menuItemStatus = new ToolStripMenuItem(UiText.StatusChecking) { Enabled = false };
 
+            LoadSettings(); // 레지스트리에서 저장된 설정 불러오기 (트레이 메뉴 빌드 전에 수행)
             BuildTrayMenu();
 
             _sysTrayIcon = new NotifyIcon { Text = UiText.AppName, ContextMenuStrip = _trayContextMenu, Visible = true };
@@ -514,6 +517,11 @@ namespace IMCPointer
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
             RebuildStateAssets();
+
+            // WndProc 디바운스 타이머: 시스템 설정 변경 메시지를 200ms 마지막 발생 기준으로 연소
+            _wndProcDebounceTimer = new System.Threading.Timer(
+                _ => this.BeginInvoke(new Action(() => RebuildAssetsWithRetry(RebuildRetryAfterWindowPosChangedMs))),
+                null, System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
 
             _stateCheckTimer = new System.Windows.Forms.Timer { Interval = AppConfig.PollingInterval };
             _stateCheckTimer.Tick += ProcessStateCheck;
@@ -543,6 +551,7 @@ namespace IMCPointer
             {
                 _isMiniIndicatorEnabled = _menuItemToggleIndicator.Checked;
                 if (!_isMiniIndicatorEnabled) UpdateLayeredIndicator(Color.Transparent, HiddenLayeredWindowLocation, HiddenLayeredWindowLocation);
+                SaveSettings(); // 설정 변경 즐시 레지스트리에 저장
             });
             _menuItemToggleIndicator.CheckOnClick = true;
             _menuItemToggleIndicator.Checked = _isMiniIndicatorEnabled;
@@ -570,7 +579,9 @@ namespace IMCPointer
         // ---------------------------------------------------------
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == WindowPosChangedMessage) Task.Delay(200).ContinueWith(_ => this.BeginInvoke(new Action(() => RebuildAssetsWithRetry(RebuildRetryAfterWindowPosChangedMs))));
+            // 디바운스 타이머로 마지막 메시지 발생 후 200ms만 실행 (몤분한 Task 생성 방지)
+            if (m.Msg == WindowPosChangedMessage)
+                _wndProcDebounceTimer?.Change(200, System.Threading.Timeout.Infinite);
             base.WndProc(ref m);
         }
 
@@ -620,6 +631,7 @@ namespace IMCPointer
             {
                 _stateCheckTimer.Stop(); RebuildStateAssets(); _stateCheckTimer.Start();
             }
+            SaveSettings(); // 설정 변경 즐시 레지스트리에 저장
         }
 
         private void SyncPointerMenuChecks()
@@ -935,11 +947,61 @@ namespace IMCPointer
         private static bool EvaluateTargetProcess(IntPtr hWnd)
         {
             if (hWnd == IntPtr.Zero) return false;
-            NativeMethods.GetWindowThreadProcessId(hWnd, out uint pid); if (pid == 0) return false;
-            try { string n = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName; foreach (string a in AppConfig.IndicatorTargetApps) if (n.Equals(a, StringComparison.OrdinalIgnoreCase)) return true; } catch { } return false;
+            NativeMethods.GetWindowThreadProcessId(hWnd, out uint pid);
+            if (pid == 0) return false;
+            try
+            {
+                // [BUG FIX] using var로 Process 사용 후 Dispose 보장 (핸들 누수 방지)
+                using var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                string n = proc.ProcessName;
+                foreach (string a in AppConfig.IndicatorTargetApps)
+                    if (n.Equals(a, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            catch { }
+            return false;
         }
 
         public static void RestoreDefaults() => NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETCURSORS, 0, IntPtr.Zero, NativeMethods.SPIF_SENDCHANGE);
+
+        // ---------------------------------------------------------
+        // 설정 저장 / 불러오기 (레지스트리 HKCU\Software\IMCPointer)
+        // ---------------------------------------------------------
+        private void SaveSettings()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(RegKeyPath);
+                key?.SetValue("PointerMode", (int)_activePointerMode);
+                key?.SetValue("MiniIndicator", _isMiniIndicatorEnabled ? 1 : 0);
+            }
+            catch { }
+        }
+
+        private void LoadSettings()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(RegKeyPath);
+                if (key == null) return;
+                // 포인터 모드 가저오기 (유효한 Enum 범위인지 검증)
+                if (key.GetValue("PointerMode") is int mode && Enum.IsDefined(typeof(PointerMode), mode))
+                    _activePointerMode = (PointerMode)mode;
+                // 미니 인디케이터 On/Off 가져오기
+                if (key.GetValue("MiniIndicator") is int mi)
+                    _isMiniIndicatorEnabled = mi != 0;
+            }
+            catch { }
+        }
+
+        // ---------------------------------------------------------
+        // 폼 닫힌 시 리소스 정리
+        // ---------------------------------------------------------
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _wndProcDebounceTimer?.Dispose();
+            _stateCheckTimer?.Stop();
+            base.OnFormClosed(e);
+        }
 
         private void UpdateLayeredIndicator(Color c, int x, int y)
         {

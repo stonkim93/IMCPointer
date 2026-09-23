@@ -210,6 +210,16 @@ dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=
 
 - Made with ❤️ for multilingual writers, scholars, engineers, and Pāḷi researchers
 
+## 🏆 Family Apps
+
+- [**IMEPointer**](https://github.com/stonkim93/IMEPointer) : Full Packages.
+
+- [**IMEPali**](https://apps.microsoft.com/detail/9PNFCVSWJNS5?hl=ko-kr&gl=KR&ocid=pdpshare) : Pali input system in the English mode.
+
+- [**IMEJapanese**](https://apps.microsoft.com/detail/9PMHRZSFVCZ2?hl=ko-kr&gl=KR&ocid=pdpshare) : Japanese123 input system in the Korean CAPS mode. 
+
+- [**IMCPointer**](https://apps.microsoft.com/detail/9MX9NMQ6LP3H?hl=ko-kr&gl=KR&ocid=pdpshare) : Color Pointer Only.
+
 
 ## 📜 라이선스 (License)
 
