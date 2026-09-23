@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright (c) 2024 stonkim93")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Color Pointer to identify the keyboard input language")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.1.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.1.0+b0a40b33f881313ad7b9c6d92392ec8570dd5856")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.1.0+e5b84c926bae614e00593fc59a28dd99862dbc25")]
 [assembly: System.Reflection.AssemblyProductAttribute("IMCPointer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IMCPointer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.1.0")]
